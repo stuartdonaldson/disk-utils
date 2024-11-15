@@ -1,0 +1,24 @@
+? Archive or Alias to Music Director?
+FO:__main__:Folder 0B1x393HDt_uqNWNjUDBCdjhGbDg copied to 1Jg8zKsRgReDhTH6x3zv3rDAi5Xf5l6Wk - folders=85/85 files=513/531.
+INFO:__main__:Created folder: Bylaws (ID: 1HgCR4qGSEIdxVpoVE0h9d2YzghZ0m7nV)
+INFO:__main__:Copying file: 2023-04-02 Standing Rules.docx (ID: 1cH5DOcL7StN9f5MrTfvrXzgt603_Y99z)
+INFO:__main__:Copied file: 2023-04-02 Standing Rules.docx (ID: 1mU15TkSX_JDH0XzAhRPYekRsgNZpSMfw)
+INFO:__main__:Copying file: Bylaws and Standing Rules feedback (ID: 14Cq8ZVOPI8ykrggPiBz2_CcwMkOqcQEIPg3D9ZhVXwI)
+INFO:__main__:Copied file: Bylaws and Standing Rules feedback (ID: 1tIDUjrNZVigr5S_SGKerqhJxRPNOP2BvH9sCvMk5ZHo)
+WARNING:GDService:*************************** Retrying due to 404
+**** error: <HttpError 404 when requesting https://www.googleapis.com/drive/v3/files/14Cq8ZVOPI8ykrggPiBz2_CcwMkOqcQEIPg3D9ZhVXwI/comments?fields=comments%28content%2C+author%2C+createdTime%2C+modifiedTime%2C+resolved%2C+replies%28author%2C+content%2C+createdTime%2C+modifiedTime%29%29&alt=json returned "File not found: 14Cq8ZVOPI8ykrggPiBz2_CcwMkOqcQEIPg3D9ZhVXwI.". Details: "[{'message': 'File not found: 14Cq8ZVOPI8ykrggPiBz2_CcwMkOqcQEIPg3D9ZhVXwI.', 'domain': 'global', 'reason': 'notFound', 'location': 'fileId', 'locationType': 'parameter'}]">
+WARNING:GDService:*************************** Retrying due to 404
+**** error: <HttpError 404 when requesting https://www.googleapis.com/drive/v3/files/14Cq8ZVOPI8ykrggPiBz2_CcwMkOqcQEIPg3D9ZhVXwI/comments?fields=comments%28content%2C+author%2C+createdTime%2C+modifiedTime%2C+resolved%2C+replies%28author%2C+content%2C+createdTime%2C+modifiedTime%29%29&alt=json returned "File not found: 14Cq8ZVOPI8ykrggPiBz2_CcwMkOqcQEIPg3D9ZhVXwI.". Details: "[{'message': 'File not found: 14Cq8ZVOPI8ykrggPiBz2_CcwMkOqcQEIPg3D9ZhVXwI.', 'domain': 'global', 'reason': 'notFound', 'location': 'fileId', 'locationType': 'parameter'}]">
+
+
+INFO:__main__:Folder 1_vE203Hj3279uDm1sC8av_fTQRBmsEZ4 copied to 1bnGUgW7myhuEd0wkkpMvdj66o-qZqSZU - folders=12/98 files=59/592.
+INFO:__main__:Folder 1_ZD-qLzP4-4jxthqRkXi8rdH3hqG9D4o copied to 1MGlhyI3XDmHPxUGRkxrEmlHMLPhbv2Wx - folders=12/98 files=59/592.
+INFO:__main__:Created folder: Congregational Meetings 2021 (ID: 1g9Z_Ig1TV_gSUd5a8Lts96ZLuwUt8Rfs)
+INFO:__main__:Copying file: NUUC June 2021 Congregational Meeting Minutes.pdf (ID: 1S5ct7GzGoc0wEivA89J_gTNaE7D5dj7l)
+INFO:__main__:Copied file: NUUC June 2021 Congregational Meeting Minutes.pdf (ID: 1IMtpnkNYeDMlf5PIgfFVWz_tXYvvbfBH)
+INFO:__main__:Created folder: Archive (ID: 1DN9e_miC94bH04yVco8uhCLPosFbnqTb)
+INFO:__main__:Copying file: Untitled form (ID: 1wWSaASyFDvOTkS81sAx-uyzCtC-G8VqIYmvGbohMK8s)
+INFO:__main__:Copied file: Untitled form (ID: 1jo1QWHprcub8BOU4b9CEAoBEWMKk_s7cbwoRgHNKFI8)
+WARNING:GDService:*************************** Retrying due to 404
+**** error: <HttpError 404 when requesting https://www.googleapis.com/drive/v3/files/1wWSaASyFDvOTkS81sAx-uyzCtC-G8VqIYmvGbohMK8s/comments?fields=comments%28content%2C+author%2C+createdTime%2C+modifiedTime%2C+resolved%2C+replies%28author%2C+content%2C+createdTime%2C+modifiedTime%29%29&alt=json returned "File not found: 1wWSaASyFDvOTkS81sAx-uyzCtC-G8VqIYmvGbohMK8s.". Details: "[{'message': 'File not found: 1wWSaASyFDvOTkS81sAx-uyzCtC-G8VqIYmvGbohMK8s.', 'domain': 'global', 'reason': 'notFound', 'location': 'fileId', 'locationType': 'parameter'}]">
+
