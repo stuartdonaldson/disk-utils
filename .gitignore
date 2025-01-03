@@ -1,0 +1,19 @@
+# Exclude Excel files
+*.xlsx
+
+# Exclude log files
+*.log
+
+# Exclude JSON files
+*.json
+
+# Exclude pickle files
+*.pickle
+
+XLS/
+
+# Other common exclusions
+.DS_Store
+Thumbs.db
+*.pyc
+__pycache__/
