@@ -271,7 +271,7 @@ class CPermission:
         if self.permissionDetails:
             for pd in self.permissionDetails:
                 if pd.role != role:
-                    pass #print (f"Role mismatch: {pd.role} vs {role}")
+                    pass #print (f"Role mismatch: {pd.role} vs {role}")a
 
     @classmethod
     def from_dict(cls, data):
@@ -304,8 +304,16 @@ class CPermission:
         permissionDetailsString = ":".join(str(detail) for detail in self.permissionDetails) 
         return permission_string(self.__dict__) + permissionDetailsString
     
-# function to return abbreviated string representing an individual detail of a permission
+    @staticmethod
+    def legend():
+        return \
+            "Role: O: owner, Z: organizer, F: fileOrganizer, W: writer, C: commenter, R: reader" + "\n" + \
+            "Type: U: user, G: group, D: domain, A: anyone\n" + \
+            "TARGET\n" + \
+            "=\n" + \
+            CPermissionDetail.legend()
 
+# function to return abbreviated string representing an individual detail of a permission
 def permission_string(permission_dict):
     # Dictionary mapping for Permssion Types
     type_map = {
@@ -314,6 +322,7 @@ def permission_string(permission_dict):
         'domain': 'D',
         'anyone': 'A'
     }
+
     # Dictionary mapping for Permission Roles
     permission_role_map = {
         'owner': 'O',
@@ -372,6 +381,11 @@ class CPermissionDetail:
                 f"  Inherited From: {self.inheritedFrom}\n"
                 f"  Role: {self.role}\n"
                 f"  Permission Type: {self.permissionType}")
+    @staticmethod
+    def legend():
+        return  "-/D: Inherited/Direct\n" + \
+                "O: owner, Z: organizer, F: fileOrganizer, W: writer, C: commenter, R: reader\n" + \
+                "M: member, F: file, D: folder, T: teamDrive"
     def __str__(self):
         # Return a condensed string representation of the permission detail, role, inherited and permission are all abbreviated to single character representations.  The email address is just the username, not the domain.
         inherited_char = '-' if self.inherited else 'D'
@@ -382,7 +396,7 @@ class CPermissionDetail:
             "folder": "D",
             "teamDrive": "T"
             }
-
+    
         # Dictionary mapping for Permission Roles
         permission_role_map = {
             'owner': 'O',
@@ -406,18 +420,33 @@ if __name__ == "__main__":
     drive_service, _, _, _ = authenticate()
     # Get the permissions for a specific file
     file_ids = [ 
+                ("My Drive", 'root', None), # DEBUG THIS for some reason this is returning an empty list
+                ("Shared Folder from Worship", '0AFrbcK92qvQTUk9PVA', None),
                 ("Shared Folder Worship Team Docs", '0B-MQKkxg8dOAZTQxNjNmZmEtNzIxNi00MDlmLWEwNmMtMjQyNjg4ZWY0Njdi',None),
                 ("Shared Drive - Worship", '0AFrbcK92qvQTUk9PVA', '0AFrbcK92qvQTUk9PVA'),
                 ]
+    print("Legend: "+CPermission.legend())
+
     for name, file_id, drive_id in file_ids:
+        tries = 0
         print(f"Scanning {name}")
+        file = get_metadata(drive_service, file_id)
+        print(f"File: {file['name']}")
+        print(f"  CPermissions from dict")
+        # print the parent folder id and parent folder name
+        print(f"  Parent Folder: {file.get('parents', 'N/A')}")
+
         list = list_files(drive_service, file_id, drive_id, additional_fields="permissions")
         for file in list:
             print(f"File: {file['name']}")
-            print(f"CPermissions for {file['name']}")
+            print(f"  CPermissions from dict")
             for pd in file.get('permissions', []):
-                print(f"  from_dict:{CPermission.from_dict(pd)}")
+                print(f"   from_dict:{CPermission.from_dict(pd)}")
 
-            print(f"CPermissions from service for {file['name']}")
+            print(f"  CPermissions from service")
             for pd in CPermission.from_service(drive_service, file['id']):
-                print(f"  from_service:{pd}")
+                print(f"   from_service:{pd}")
+
+            tries += 1
+            if tries > 1:
+                break
