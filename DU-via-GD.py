@@ -2,6 +2,7 @@ import os
 import time
 import string
 import GDCopy.GDService as GDService
+import json
 
 # convert time t which is seconds since the epoch to a string parsable by excel
 def time_to_Ymd_HMS(t):
@@ -226,19 +227,19 @@ class GDEntry(BaseEntry):
         else:
             pperm = []
 
-        self.permissions = []
+        self.permissions = ["f:"]
         for p in perm:
             self.permissions.append(str(GDService.CPermission.from_dict(p)))
 
-        self.direct_permissions = []
+        self.direct_permissions = ["f:"]
         for p in self.permissions:
             if p not in pperm:
                 self.direct_permissions.append(p)
         return
 
     def load_permissions_from_service(self):
-        perms = []
-        dperms = []
+        perms = ["s:"]
+        dperms = ["s:"]
         for p in GDService.CPermission.from_service(drive_service, self.id):
             thisperm = str(p)
             perms.append(thisperm)
@@ -267,7 +268,43 @@ progress = TimedProgress()
 class Permissions:
     def __init__(self, permissions):
         self.permissions = permissions
-    
+src2dest = {}
+dest2src = {}
+
+def get_original_path(file_id):
+    # Ensure the state is loaded
+    global dest2src, src2dest
+
+    if not src2dest:
+        with open('gdcopy_state.json', 'r') as f:
+            state = json.load(f)
+            src2dest = state.get('src2dest', {})
+
+            # src2dest[id]['dest_id'] = dest_id, so invert this creating a dest2src dictionary
+            dest2src = {}
+            for src_id, file in src2dest.items():
+                dest_id = file.get('dest_id')
+                if dest_id:
+                    dest2src[dest_id] = file
+
+    # calculate the path for the original file
+    # if the file_id is in dest2src, then the original path is the path of the src2dest entry, co 
+    if file_id in dest2src:
+        file_id = dest2src[file_id]['id']  # get the original file_id
+        # walk the parents chain of src2dest[file_id] to calculate the path, only looking at the first element of parents.
+        path = []
+        while file_id and file_id in src2dest:
+            path.append(src2dest[file_id]['name'])
+            # get the parent of the current file_id if they are defined and there is a first element.
+            if 'parents' in src2dest[file_id] and src2dest[file_id]['parents']:
+                file_id = src2dest[file_id]['parents'][0]
+            else:
+                file_id = None
+        path.reverse()
+        return '/'.join(path)
+
+    # If not found, return None
+    return None
 
 
 # FileSystemWalker walks the hierarchy of the file system under the path.
@@ -303,6 +340,7 @@ class FileSystemWalker:
             totsize = 0
             totlocalsize = 0
             filecount = 0
+            entry = None
             for entry in folder.listfolder():
                 if entry.name == 'desktop.ini':
                     continue
@@ -326,6 +364,10 @@ class FileSystemWalker:
                     self.collector.add(entry)
 
         except OSError as e:
+            if entry:
+                path = entry.path
+            else:
+                path = folder.path
             self.collector.add(entry, mostrecent=mostrecent, error=str(e), path=path)
         return mostrecent, totsize, totlocalsize, filecount
     
@@ -345,7 +387,8 @@ class Collector:
                                 'mr_path', 'mr_size', 'mr_mtime', 
                                 'modified_by', 'direct_permissions',
                                 'permissions', 
-                                'owner', 'type', 'link', 'error']
+                                'owner', 'type', 'link', 'old_path','error']
+        
 
     def add(self, entry, mostrecent=None, path=None, error=None, filecount=None):
         adding = {}
@@ -360,6 +403,7 @@ class Collector:
             adding["type"] = entry.type
             adding["modified_by"] = entry.modified_by
             adding["link"] = getattr(entry, 'link', '')
+            adding["old_path"] = get_original_path(entry.id) if isinstance(entry, GDEntry) else ''
 
             if getattr(entry, 'permissions', None):
                 # permissions is a list of CPermission instances.  Convert to a string
@@ -395,14 +439,19 @@ class Collector:
                 adding["path"] = adding["path"][lp:]
             if "mr_path" in adding and adding["mr_path"].startswith(self.root):
                 adding["mr_path"] = adding["mr_path"][lp:]
-        # return if any of the selements of self.exclude are in the string path
-        if any([ex in adding["path"] for ex in self.exclude]):
+        # return if any of the selements of self.exclude are in the string pathi
+#        if any([ex in adding["path"] for ex in self.exclude]):
+#            return
+        # return if an item in self.exclude is contained in path and the filecount is non zero
+        if any([ex in adding["path"] for ex in self.exclude]) and not filecount:
             return
         # if we have > 1M entries, then only add the ones that have a filecount.
         if (len(self.data_rows) > 1000000) and not filecount:
             return
         if (len(self.data_rows) > 1048000):
             return
+        if not adding.get('path'):
+            pass
         progress.progress(f"processing {adding['path']}")
         
         self.data_rows.append(adding)
@@ -424,13 +473,14 @@ class Collector:
         # create a Pandas Excel writer using XlsxWriter as the engine.  If there is an error creating
         # the output_file, then retry up to 5 times, appending (#) to the basename of the output file
         # incrementing each time.
+        writer = None
         for i in range(5):
+            base, ext = os.path.splitext(self.output_file)
             try:
                 writer = pd.ExcelWriter(self.output_file, engine='xlsxwriter')
                 break
             except Exception as e:
                 print(f"Error creating {self.output_file}: {e}")
-                base, ext = os.path.splitext(self.output_file)
                 self.output_file = f"{base}({i}){ext}"
                 print(f"Trying {self.output_file}")
 
@@ -488,6 +538,14 @@ class Collector:
                 worksheet.set_column(localsize_col, localsize_col, None, num_format)
             if mr_size_col is not None:
                 worksheet.set_column(mr_size_col, mr_size_col, None, num_format)
+            # Add a comment to the header labeled 'Permissions'
+            header_row = 0
+            p_col = self.write_headers.index('direct_permissions')
+            worksheet.write_comment(header_row, p_col, 'Permissions not found in the parent.')
+
+            p_col = self.write_headers.index('permissions')
+            worksheet.write_comment(header_row, p_col, GDService.CPermission.legend(), {'width': 400, 'height': 100})
+    
             writer.close()
 
         else:
@@ -514,18 +572,21 @@ if __name__ == '__main__':
 #                ('1HY8XzdaZ_MjG7DeUnJwSFFkRI0T5-IAt', 'xls/du-test-worship.xlsx', []),
 #                ('1RmrJNxKNiinOtgjLGEm85riEv4gbww_S', 'xls/du-test.xlsx', []),
 #                ('0B1x393HDt_uqam1HTlhQcy12YW8', 'xls/du-gd-board-shared.xlsx', []),
-#                ('0AFrbcK92qvQTUk9PVA', 'xls/du-gd-worship.xlsx', []),                   
-#                ('0AKWZBbyOteK0Uk9PVA', 'xls/du-gd-board.xlsx', []),a
-                ('0AO1x9mFRA0upUk9PVA', 'xls/du-gd-administration.xlsx', []),
-                ('0AAKmY0-DC2OqUk9PVA', 'xls/du-gd-governance.xlsx', []),
-                ('0AF20wXRlCeg1Uk9PVA', 'xls/du-gd-finance.xlsx', []),
+#                ('0AO1x9mFRA0upUk9PVA','xls/du-gd-administration.xlsx', []),
+#                ('0AFrbcK92qvQTUk9PVA', 'xls/du-gd-worship.xlsx', []),
+                #('0AKWZBbyOteK0Uk9PVA', 'xls/du-gd-board.xlsx', []),
+                #('0AO1x9mFRA0upUk9PVA', 'xls/du-gd-administration.xlsx', []),
+                #('0AAKmY0-DC2OqUk9PVA', 'xls/du-gd-governance.xlsx', []),
+                #('0AF20wXRlCeg1Uk9PVA', 'xls/du-gd-finance.xlsx', []),
                 #('1_uHpj8c6eQLLq-iO5NCNqYciobQ7dXHP', 'xls/du-gd.xlsx', []),
                 #('c:/tmp', 'xls/du-tmp.xlsx', []),
+                #('0B-MQKkxg8dOAZTQxNjNmZmEtNzIxNi00MDlmLWEwNmMtMjQyNjg4ZWY0Njdi', 'xls/du-worship-docs.xlsx', []),
                 #('G:\\.shortcut-targets-by-id\\0B-MQKkxg8dOAZTQxNjNmZmEtNzIxNi00MDlmLWEwNmMtMjQyNjg4ZWY0Njdi\\Worship Team Docs', 'xls/du-worship-docs.xlsx'),
                 #('G:\\.shortcut-targets-by-id\\0B6XHzr6S7-pNN28weFpaaW1OUEk\\Choir', 'xls/du-choir-folder2.xlsx'),
                 #('g:/shared drives/Board', 'xls/du-board.xlsx', []),
                 #('G:\\Shared drives\\Worship', 'xls/du-worship2.xlsx', []),
-                #('c:\\', 'xls/du-c2.xlsx', []), #['WinSxS\\', 'Windows\\', 'OneDrive\\']),    
+                #('0AOHETwyZCY8mUk9PVA', 'xls/du-gd-hr.xlsx', []),
+                #('c:\\', 'xls/du-c2.xlsx', ['WinSxS\\', 'Windows\\', 'OneDrive\\', '.lrdata\\', '.lrcat-data\\', '.lrcat\\']),
                 #('C:/Users/stuar/OneDrive/Documents/fb', 'xls/du-fb.xlsx', []), 
                 #('G:\\Shared drives\\Photographs\\Northlake Pics', 'xls/du-northlake-pics.xlsx'),
                 #('G:\\.shortcut-targets-by-id\\0B6sDSIKItI3Tc2YwdTlhM3ItblU\\Northlake Pics', 'xls/du-s-northlake-pics.xlsx'),
@@ -533,6 +594,8 @@ if __name__ == '__main__':
                 #('G:/shared drives/music/Migration In Process', 'xls/du-m-choir.xlsx'),
                 #('G:/shared drives/music', 'xls/du-music2.xlsx', []),
                 #('C:/Users/stuar/OneDrive', 'xls/du-onedrive.xlsx', [] ),
+                ('G:/My Drive/Proj', 'xls/du-gproj.xlsx', [".git","DiskUtilization"]),
+                ('C:/Users/stuar/OneDrive/Proj', 'xls/du-cproj.xlsx', [".git",".jpg"]),
                 ]:
 
         collector = Collector(output_file, path, exclude)
