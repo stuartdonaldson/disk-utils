@@ -377,12 +377,12 @@ import win32security
 import pandas as pd
 
 class Collector:
-    def __init__(self, output_file='du-default.csv', path='', exclude=[]):
+    def __init__(self, output_file='du-default.csv', paths=[], exclude=[]):
         self.output_file = output_file
         self.exclude = exclude
         self.data_rows = []
-        self.root = path
-        self.write_headers = ['path', 'size', 'mtime', 'localsize', 'cloud',
+        self.roots = paths
+        self.write_headers = ['root', 'path', 'size', 'mtime', 'localsize', 'cloud',
                                 'filecount',
                                 'mr_path', 'mr_size', 'mr_mtime', 
                                 'modified_by', 'direct_permissions',
@@ -433,12 +433,21 @@ class Collector:
         if path:
             adding["path"] = path
 
-        if self.root:
-            lp = len(self.root)
-            if "path" in adding and adding["path"].startswith(self.root):
-                adding["path"] = adding["path"][lp:]
-            if "mr_path" in adding and adding["mr_path"].startswith(self.root):
-                adding["mr_path"] = adding["mr_path"][lp:]
+        if self.roots:
+            multi = len(self.roots) > 1
+            for idx in range(len(self.roots)):
+                root = self.roots[idx]
+                lp = len(root)
+                if multi:
+                    pfx = f"{idx}:"
+                else:
+                    pfx = ""
+                if "path" in adding and adding["path"].startswith(root):
+                    adding["path"] = pfx + adding["path"][lp:]
+                    adding["root"] = root
+                if "mr_path" in adding and adding["mr_path"].startswith(root):
+                    adding["mr_path"] = pfx + adding["mr_path"][lp:]
+
         # return if any of the selements of self.exclude are in the string pathi
 #        if any([ex in adding["path"] for ex in self.exclude]):
 #            return
@@ -522,11 +531,12 @@ class Collector:
             for col in ['size', 'mtime', 'filecount', 'mr_size', 'mr_mtime']:
                 max_len = data[col].astype(str).str.len().max()
                 max_len = max_len if max_len > len(col) else len(col)
-                worksheet.set_column(self.write_headers.index(col), self.write_headers.index(col), max_len)
+                worksheet.set_column(self.write_headers.index(col), self.write_headers.index(col), max_len+1)
             
             #set the column width for columns path and mr_path to 75
             worksheet.set_column(self.write_headers.index('path'), self.write_headers.index('path'), 75)
-            worksheet.set_column(self.write_headers.index('mr_path'), self.write_headers.index('mr_path'), 75)
+            worksheet.set_column(self.write_headers.index('mr_path'), self.write_headers.index('mr_path'), 10)
+            worksheet.set_column(self.write_headers.index('root'), self.write_headers.index('root'), 5)
 
             #turn on auto filter
             worksheet.autofilter(0, 0, len(data), len(data.columns) - 1)
@@ -594,13 +604,20 @@ if __name__ == '__main__':
                 #('G:/shared drives/music/Migration In Process', 'xls/du-m-choir.xlsx'),
                 #('G:/shared drives/music', 'xls/du-music2.xlsx', []),
                 #('C:/Users/stuar/OneDrive', 'xls/du-onedrive.xlsx', [] ),
-                ('G:/My Drive/Proj', 'xls/du-gproj.xlsx', [".git","DiskUtilization"]),
-                ('C:/Users/stuar/OneDrive/Proj', 'xls/du-cproj.xlsx', [".git",".jpg"]),
+                (   [
+                    'G:\\My Drive\\Proj',
+                    'C:\\Users\\stuar\\OneDrive\\Proj'
+                    ],
+                    'xls/du-proj.xlsx', [".jpg",".git","DiskUtilization"]),
                 ]:
 
+        # if path is not a list, then make it a list
+        if not isinstance(path, list):
+            path = [path]
         collector = Collector(output_file, path, exclude)
-        walker = FileSystemWalker(path, collector)
-        walker.walk()
+        for p in path:                
+            walker = FileSystemWalker(p, collector)
+            walker.walk()
         collector.save()
         print('Done*******************  ', output_file)
 
