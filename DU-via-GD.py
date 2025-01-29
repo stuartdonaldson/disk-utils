@@ -393,8 +393,8 @@ class Collector:
     def add(self, entry, mostrecent=None, path=None, error=None, filecount=None):
         adding = {}
         if entry:
-            adding["path"] = entry.path
-            adding["name"] = entry.name
+            adding["path"] = entry.path.encode('utf-8', errors='ignore').decode('utf-8')
+            adding["name"] = entry.name.encode('utf-8', errors='ignore').decode('utf-8')
             adding["size"] = entry.size 
             adding["mtime"] = entry.strmtime()
             adding["cloud"] = entry.is_cloud()
@@ -417,7 +417,8 @@ class Collector:
             mr_path = mostrecent.path
             if entry and mr_path.startswith(entry.path):
                 mr_path = mr_path[len(entry.path):]
-            adding["mr_path"] = mr_path
+            adding["mr_path"] = mr_path.encode('utf-8', errors='ignore').decode('utf-8')
+            adding["mr_name"] = mostrecent.name.encode('utf-8', errors='ignore').decode('utf-8')
             adding["mr_name"] = mostrecent.name
             adding["mr_size"] = mostrecent.size
             adding["mr_mtime"] = mostrecent.strmtime()
@@ -452,7 +453,7 @@ class Collector:
 #        if any([ex in adding["path"] for ex in self.exclude]):
 #            return
         # return if an item in self.exclude is contained in path and the filecount is non zero
-        if any([ex in adding["path"] for ex in self.exclude]) and not filecount:
+        if any([ex in adding["path"] for ex in self.exclude]): # and not filecount:
             return
         # if we have > 1M entries, then only add the ones that have a filecount.
         if (len(self.data_rows) > 1000000) and not filecount:
@@ -596,19 +597,19 @@ if __name__ == '__main__':
                 #('g:/shared drives/Board', 'xls/du-board.xlsx', []),
                 #('G:\\Shared drives\\Worship', 'xls/du-worship2.xlsx', []),
                 #('0AOHETwyZCY8mUk9PVA', 'xls/du-gd-hr.xlsx', []),
-                #('c:\\', 'xls/du-c2.xlsx', ['WinSxS\\', 'Windows\\', 'OneDrive\\', '.lrdata\\', '.lrcat-data\\', '.lrcat\\']),
                 #('C:/Users/stuar/OneDrive/Documents/fb', 'xls/du-fb.xlsx', []), 
                 #('G:\\Shared drives\\Photographs\\Northlake Pics', 'xls/du-northlake-pics.xlsx'),
                 #('G:\\.shortcut-targets-by-id\\0B6sDSIKItI3Tc2YwdTlhM3ItblU\\Northlake Pics', 'xls/du-s-northlake-pics.xlsx'),
                 #('c:\\tmp', 'xls/du-tmp.xlsx'),
                 #('G:/shared drives/music/Migration In Process', 'xls/du-m-choir.xlsx'),
                 #('G:/shared drives/music', 'xls/du-music2.xlsx', []),
-                #('C:/Users/stuar/OneDrive', 'xls/du-onedrive.xlsx', [] ),
-                (   [
-                    'G:\\My Drive\\Proj',
-                    'C:\\Users\\stuar\\OneDrive\\Proj'
-                    ],
-                    'xls/du-proj.xlsx', [".jpg",".git","DiskUtilization"]),
+                ("c:\\", 'xls/du-c.xlsx', ["WinSxS\\", "Windows\\", "OneDrive\\", ".lrdata\\", ".lrcat-data\\", ".lrcat\\", "$Recycle.Bin\\"]),
+                ('C:/Users/stuar/OneDrive', 'xls/du-onedrive.xlsx', [] ),
+                #(   [
+                #    'G:\\My Drive\\Proj',
+                #    'C:\\Users\\stuar\\OneDrive\\Proj'
+                #    ],
+                #    'xls/du-proj.xlsx', [".jpg",".git","DiskUtilization"]),
                 ]:
 
         # if path is not a list, then make it a list
